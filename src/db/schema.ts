@@ -11,6 +11,7 @@ import {
   pgEnum,
   unique,
   check,
+  primaryKey,
 } from "drizzle-orm/pg-core";
 import { relations, sql } from "drizzle-orm";
 
@@ -42,6 +43,61 @@ export const voteTargetTypeEnum = pgEnum("vote_target_type", [
   "FIXTURE",
   "PROPOSAL",
 ]);
+
+export const users = pgTable("users", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name"),
+  email: text("email").notNull().unique(),
+  emailVerified: timestamp("email_verified", { withTimezone: true }),
+  image: text("image"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const accounts = pgTable(
+  "accounts",
+  {
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    provider: text("provider").notNull(),
+    providerAccountId: text("provider_account_id").notNull(),
+    // Property names below are snake_case (not camelCase, unlike the rest of
+    // this schema) because @auth/drizzle-adapter's PostgresAccountsTable type
+    // requires these exact JS keys, not just matching DB column names.
+    refresh_token: text("refresh_token"),
+    access_token: text("access_token"),
+    expires_at: integer("expires_at"),
+    token_type: text("token_type"),
+    scope: text("scope"),
+    id_token: text("id_token"),
+    session_state: text("session_state"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  ],
+);
+
+export const sessions = pgTable("sessions", {
+  sessionToken: text("session_token").primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  expires: timestamp("expires", { withTimezone: true }).notNull(),
+});
+
+/** Used by Auth.js for magic-link email verification; unused with OAuth-only providers but required by the adapter's schema shape. */
+export const verificationTokens = pgTable(
+  "verification_tokens",
+  {
+    identifier: text("identifier").notNull(),
+    token: text("token").notNull(),
+    expires: timestamp("expires", { withTimezone: true }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.identifier, table.token] })],
+);
 
 export const sports = pgTable("sports", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -176,7 +232,9 @@ export const votes = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     targetType: voteTargetTypeEnum("target_type").notNull(),
     targetId: uuid("target_id").notNull(),
-    userId: uuid("user_id").notNull(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
     direction: smallint("direction").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -191,6 +249,24 @@ export const votes = pgTable(
     check("votes_direction_check", sql`${table.direction} in (1, -1)`),
   ],
 );
+
+export const usersRelations = relations(users, ({ many }) => ({
+  accounts: many(accounts),
+  sessions: many(sessions),
+  votes: many(votes),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+  user: one(users, { fields: [accounts.userId], references: [users.id] }),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, { fields: [sessions.userId], references: [users.id] }),
+}));
+
+export const votesRelations = relations(votes, ({ one }) => ({
+  user: one(users, { fields: [votes.userId], references: [users.id] }),
+}));
 
 export const sportsRelations = relations(sports, ({ many }) => ({
   competitions: many(competitions),

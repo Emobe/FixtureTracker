@@ -171,6 +171,34 @@ change a fixture depends on whether its competition is locked.**
   team name and competition name link here. There's still no `/teams` or
   `/competitions` *list* page — `BottomNav`'s "Teams" entry stays disabled
   until one exists.
+- **UI design system (5.1)**: the fan portal uses a deep slate/zinc dark
+  mode with a single custom accent color (`--accent`, defined in
+  `src/app/globals.css` and exposed as Tailwind's `bg-accent` /
+  `text-accent` / etc via `@theme inline`) — not stock Tailwind
+  emerald/green — plus `--surface`/`--border` tokens for cards. Team
+  crests without a `crestUrl` render as a monogram whose color is a
+  deterministic hash of the team name (`nameHue` in `FixtureCard.tsx`), so
+  the same team gets the same color everywhere. Kickoff times and scores
+  use `font-mono` (scoreboard feel); everything else uses the default
+  Geist Sans.
+- **Auth.js (5.1)**: `next-auth@beta` (v5) configured in `src/auth.ts`
+  with `@auth/drizzle-adapter` and database sessions (not JWT), GitHub as
+  the sole OAuth provider for now. The adapter's TypeScript types for the
+  Postgres `accounts` table require the JS object keys themselves to be
+  snake_case (`refresh_token`, `access_token`, `expires_at`, `token_type`,
+  `id_token`, `session_state`) — unlike every other table in this schema,
+  which uses camelCase JS keys mapped to snake_case DB columns. Don't
+  "fix" this back to camelCase; it fails to typecheck against
+  `DefaultPostgresAccountsTable`. Sign-in requires `AUTH_GITHUB_ID` /
+  `AUTH_GITHUB_SECRET` in `.env` from a GitHub OAuth App (Homepage
+  `http://localhost:3000`, Callback
+  `http://localhost:3000/api/auth/callback/github`) — until those are
+  set, the "Sign in" button renders fine but the OAuth handshake will
+  fail. `trustHost: true` is set because local dev runs on whatever port
+  is free (see below), not a fixed `NEXTAUTH_URL`. The route handler is
+  `src/app/api/auth/[...nextauth]/route.ts`; UI lives in
+  `src/components/AuthButton.tsx` (a Server Component using inline Server
+  Actions for sign-in/sign-out, rendered from `Header.tsx`).
 
 ## Standard Commands
 
@@ -221,7 +249,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 4.2 FixtureCard & match details
   - [x] 4.3 "Subscribe to Calendar" modal
 - **Phase 5 — Crowdsourcing & Governance**
-  - [ ] 5.1 Auth.js authentication setup
+  - [x] 5.1 Auth.js authentication setup
   - [ ] 5.2 Grassroots fixture submission form (locked-competition block)
   - [ ] 5.3 Community verification & upvoting (+3 promotion rule)
 - **Phase 6 — Production Polish & PWA**
