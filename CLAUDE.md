@@ -123,6 +123,11 @@ change a fixture depends on whether its competition is locked.**
   and the same name (a GAA county, etc.) can field separate teams across
   different sports. Always pass `sportSlug` to `getOrCreateTeam`
   (`src/scrapers/db-helpers.ts`).
+- `src/scrapers/runner.ts` (`npm run scrape`) spawns each adapter as a
+  child process rather than importing them in-process, so one adapter's
+  crash or `process.exit()` can't kill the others. Idempotency itself
+  lives in `upsertFixture` (`fixtures.externalRef`, unique per
+  competition), not in the runner.
 
 ## Standard Commands
 
@@ -164,7 +169,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 2.1 Base scraper framework & normalized types
   - [x] 2.2 UK Super League scraper adapter
   - [x] 2.3 GAA All-Ireland scraper adapter
-  - [ ] 2.4 Unified ingestion runner CLI (idempotent upserts)
+  - [x] 2.4 Unified ingestion runner CLI (idempotent upserts)
 - **Phase 3 — Public APIs & Calendar Feeds**
   - [ ] 3.1 Public read-only REST API (`/api/v1/*`)
   - [ ] 3.2 Dynamic iCal / webcal subscription feeds
