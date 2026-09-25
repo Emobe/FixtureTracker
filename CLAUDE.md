@@ -283,6 +283,17 @@ change a fixture depends on whether its competition is locked.**
   tools can't drive) and confirming a previously-visited page still
   rendered fully while an unvisited one fell back to `/offline`, then
   confirming a normal page load again once the server came back.
+  **`ServiceWorkerRegister` only registers `sw.js` in production**
+  (`process.env.NODE_ENV === "production"`) — in any other environment it
+  actively unregisters and clears caches instead. This was a real bug,
+  not a precaution: the service worker was first registered and tested
+  under `npm run start` on `localhost:3000`, and a service worker
+  persists per-origin in the browser regardless of which server process
+  is behind it — so it kept intercepting requests and serving the
+  precached `/offline` page after switching to `npm run dev` on the same
+  origin, even though the dev server was running fine. If a "you're
+  offline" false-positive ever comes back, suspect a stale registration
+  from testing under `next start` again, not this guard.
 - **Cron ingestion (6.2)**: `src/scrapers/runner.ts` (the CLI) and
   `src/app/api/cron/scrape/route.ts` (the cron endpoint) now share
   `src/scrapers/run-adapters.ts` (`ADAPTERS` + `runAdapter`) instead of
