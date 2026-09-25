@@ -151,6 +151,17 @@ change a fixture depends on whether its competition is locked.**
   warning). Fixed by always rendering the default (light) icon on first
   render — matching the server exactly — then correcting from real DOM
   state in a mount effect. Don't reintroduce the lazy-initializer version.
+- **"Live" isn't a stored fixture status** — the schema only has
+  `SCHEDULED`/`POSTPONED`/`CANCELLED`/`COMPLETED`. `FixtureCard` derives a
+  "Live" pill display-side when a `SCHEDULED` fixture's kickoff has passed
+  but is still within the assumed ~2h match window (see `displayStatus` in
+  `src/components/FixtureCard.tsx`). Don't add a `LIVE` DB enum value for
+  this.
+- The homepage's day filter (`src/app/page.tsx`) buckets fixtures by UTC
+  calendar day (`[00:00, 24:00)` UTC for the requested date), not the
+  viewer's local day — a fixture just after midnight UTC-local-evening can
+  land on what looks like the "wrong" day for some timezones. Acceptable
+  for now; revisit only if it becomes a real complaint.
 
 ## Standard Commands
 
@@ -198,7 +209,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 3.2 Dynamic iCal / webcal subscription feeds
 - **Phase 4 — Mobile-First Fan Portal**
   - [x] 4.1 Layout, navigation, sport tabs, date bar
-  - [ ] 4.2 FixtureCard & match details
+  - [x] 4.2 FixtureCard & match details
   - [ ] 4.3 "Subscribe to Calendar" modal
 - **Phase 5 — Crowdsourcing & Governance**
   - [ ] 5.1 Auth.js authentication setup
