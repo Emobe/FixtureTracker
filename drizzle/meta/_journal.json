@@ -36,6 +36,13 @@
       "when": 1790358732541,
       "tag": "0004_dapper_blacklash",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790359268762,
+      "tag": "0005_bizarre_vulture",
+      "breakpoints": true
     }
   ]
 }

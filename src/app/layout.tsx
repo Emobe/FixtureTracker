@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import { BottomNav } from "@/components/BottomNav";
 import { Header } from "@/components/Header";
+import { SubmitFixtureButton } from "@/components/SubmitFixtureButton";
 import { THEME_INIT_SCRIPT } from "@/lib/theme-script";
 import "./globals.css";
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <main className="mx-auto w-full max-w-3xl flex-1 pb-24 md:pb-10">
           {children}
         </main>
+        <SubmitFixtureButton />
         <BottomNav />
       </body>
     </html>

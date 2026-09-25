@@ -1,5 +1,6 @@
+import { eq } from "drizzle-orm";
 import { db } from "./index";
-import { sports, venues } from "./schema";
+import { competitions, sports, venues } from "./schema";
 
 async function seed() {
   console.log("Seeding sports...");
@@ -59,6 +60,28 @@ async function seed() {
     .onConflictDoNothing({ target: venues.name })
     .returning();
   console.log(`  inserted ${insertedVenues.length} venue(s)`);
+
+  console.log("Seeding an unlocked community competition...");
+  const rollerDerby = await db.query.sports.findFirst({
+    where: eq(sports.slug, "roller-derby"),
+  });
+  if (rollerDerby) {
+    const insertedCompetitions = await db
+      .insert(competitions)
+      .values([
+        {
+          sportId: rollerDerby.id,
+          slug: "roller-derby-community-league-2026",
+          name: "Community Roller Derby League 2026",
+          season: "2026",
+          isLocked: false,
+          authorityType: "COMMUNITY",
+        },
+      ])
+      .onConflictDoNothing({ target: competitions.slug })
+      .returning();
+    console.log(`  inserted ${insertedCompetitions.length} competition(s)`);
+  }
 
   console.log("Seed complete.");
   process.exit(0);

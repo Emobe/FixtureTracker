@@ -181,6 +181,10 @@ export const fixtures = pgTable(
      * venue is later rescheduled. Null for community-submitted fixtures.
      */
     externalRef: text("external_ref"),
+    /** Null for scraped fixtures; set for community submissions into unlocked competitions. */
+    submittedByUserId: uuid("submitted_by_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     scheduledStartTime: timestamp("scheduled_start_time", {
       withTimezone: true,
     }).notNull(),
@@ -254,6 +258,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   sessions: many(sessions),
   votes: many(votes),
+  submittedFixtures: many(fixtures),
 }));
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
@@ -320,6 +325,10 @@ export const fixturesRelations = relations(fixtures, ({ one, many }) => ({
   venue: one(venues, {
     fields: [fixtures.venueId],
     references: [venues.id],
+  }),
+  submittedBy: one(users, {
+    fields: [fixtures.submittedByUserId],
+    references: [users.id],
   }),
   proposals: many(fixtureProposals),
 }));

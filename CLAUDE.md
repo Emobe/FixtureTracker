@@ -64,11 +64,13 @@ sports-fixtures/
   scheduledStartTime, status (`SCHEDULED` | `POSTPONED` | `CANCELLED` |
   `COMPLETED`), broadcastInfo, streamUrl, homeScoreDisplay, awayScoreDisplay,
   scoreData (jsonb), **trustStatus** (`OFFICIAL` | `COMMUNITY_VERIFIED` |
-  `NEEDS_VERIFICATION`)
+  `NEEDS_VERIFICATION`), submittedByUserId (null for scraped fixtures)
 - `fixture_proposals` — id, fixtureId, proposedStartTime, proposedVenueId,
   reason, proofUrl, status, netVotes
 - `votes` — id, targetType (`FIXTURE` | `PROPOSAL`), targetId, userId,
   direction (+1 / -1), unique on `(userId, targetType, targetId)`
+- `users` / `accounts` / `sessions` / `verification_tokens` — Auth.js's
+  Postgres adapter tables (see the Auth.js gotcha note below)
 
 ## Governance Rules (critical — do not violate)
 
@@ -198,7 +200,34 @@ change a fixture depends on whether its competition is locked.**
   is free (see below), not a fixed `NEXTAUTH_URL`. The route handler is
   `src/app/api/auth/[...nextauth]/route.ts`; UI lives in
   `src/components/AuthButton.tsx` (a Server Component using inline Server
-  Actions for sign-in/sign-out, rendered from `Header.tsx`).
+  Actions for sign-in/sign-out, rendered from `Header.tsx`). Database
+  sessions don't put the user id on `session.user` by default — added via
+  a `session` callback in `src/auth.ts` plus a module augmentation in
+  `src/types/next-auth.d.ts` so `session.user.id` typechecks.
+- **Grassroots fixture submission (5.2)**: reachable via the floating "+"
+  button in `src/app/layout.tsx` (`SubmitFixtureButton` -> the modal
+  `SubmitFixtureModal`, submitting to the Server Action in
+  `src/app/actions/submit-fixture.ts`, validated with `zod` in
+  `src/lib/validation/fixture-submission.ts`). The competition `<select>`
+  is only ever populated from unlocked competitions, and the action
+  independently re-checks `competition.isLocked` server-side (a tampered
+  request could otherwise target a locked competition directly) —
+  returning the exact message from the plan: "Official fixtures for this
+  league are managed automatically." Home/away teams and the venue are
+  free-text and resolved with the scrapers' own `getOrCreateTeam` /
+  `getOrCreateVenue` helpers (`src/scrapers/db-helpers.ts`) — reused as-is
+  rather than duplicated, since a grassroots club's team may not exist
+  yet. New fixtures get `trustStatus = 'NEEDS_VERIFICATION'`. There is no
+  separate audit-log table — the mandatory proof URL and submission
+  reason are recorded as a `fixture_proposals` row with
+  `status = 'ACCEPTED'` (reusing that table as the audit trail for the
+  *initial* submission, not just for later proposed changes to an
+  existing fixture). A `"use server"` file can only export async
+  functions, so `SubmitFixtureState` / `initialSubmitFixtureState` live in
+  the validation file instead of the actions file — don't move them back.
+- The seed script (`src/db/seed.ts`) also creates one unlocked
+  `roller-derby-community-league-2026` competition — without it there is
+  nothing for the submission form's competition picker to list.
 
 ## Standard Commands
 
@@ -250,7 +279,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 4.3 "Subscribe to Calendar" modal
 - **Phase 5 — Crowdsourcing & Governance**
   - [x] 5.1 Auth.js authentication setup
-  - [ ] 5.2 Grassroots fixture submission form (locked-competition block)
+  - [x] 5.2 Grassroots fixture submission form (locked-competition block)
   - [ ] 5.3 Community verification & upvoting (+3 promotion rule)
 - **Phase 6 — Production Polish & PWA**
   - [ ] 6.1 PWA manifest & offline support
