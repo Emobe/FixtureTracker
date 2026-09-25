@@ -137,7 +137,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
         venues, fixtures)
   - [x] 1.3 Governance schema (fixture_proposals, votes) & seed script
 - **Phase 2 — Scraper-First Pipeline**
-  - [ ] 2.1 Base scraper framework & normalized types
+  - [x] 2.1 Base scraper framework & normalized types
   - [ ] 2.2 UK Super League scraper adapter
   - [ ] 2.3 GAA All-Ireland scraper adapter
   - [ ] 2.4 Unified ingestion runner CLI (idempotent upserts)
