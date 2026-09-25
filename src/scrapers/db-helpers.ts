@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 import { competitions, fixtures, sports, teams, venues } from "../db/schema";
+import { TEAM_CRESTS } from "./team-crests";
 
 export function slugify(name: string): string {
   return name
@@ -106,6 +107,7 @@ export async function getOrCreateTeam(params: {
       slug,
       name: params.name,
       shortName: params.shortName ?? null,
+      crestUrl: TEAM_CRESTS[slug] ?? null,
     })
     .onConflictDoNothing({ target: teams.slug })
     .returning();

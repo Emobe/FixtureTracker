@@ -331,6 +331,23 @@ change a fixture depends on whether its competition is locked.**
   data, and idempotently updated existing fixture rows (0 inserted, as
   expected since they were already seeded) — and by confirming
   `npm run scrape` still works unchanged after the `runner.ts` refactor.
+- **Team crests**: `src/scrapers/team-crests.ts` maps sport-namespaced team
+  slugs to real crest image URLs, sourced from Wikipedia's public REST
+  summary API (`en.wikipedia.org/api/rest_v1/page/summary/<title>`) — the
+  same images Wikipedia itself displays for identification purposes.
+  `getOrCreateTeam` (`db-helpers.ts`) looks a new team up in this map and
+  sets `crestUrl` on insert, so a fresh clone/reseed/rescrape gets crests
+  automatically — they aren't just a one-off DB mutation. These are
+  trademarked marks; fine for a local dev project, but don't assume
+  they're cleared for reuse if this app is ever deployed publicly, verify
+  licensing per team first. Community-submitted teams (grassroots clubs,
+  Roller Derby) will never have a mapped crest and correctly fall back to
+  `FixtureCard`'s color-hash monogram — that's expected, not a bug.
+  Wikipedia's summary API rate-limits aggressively in a tight loop; if
+  backfilling more teams later, space requests out (~1.5s) and retry 429s
+  with backoff rather than firing them all at once.
+
+## Standard Commands
 
 ```bash
 # Local database (host port 5433 -> container 5432; 5433 avoids clashing
