@@ -1,4 +1,5 @@
-import { and, asc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import Link from "next/link";
 import { Suspense } from "react";
 import { DateBar } from "@/components/DateBar";
 import { FixtureCard } from "@/components/FixtureCard";
@@ -15,23 +16,29 @@ function parseDateParam(value: string | undefined): Date {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 }
 
-async function getFixturesForDay(sportSlug: string | undefined, day: Date) {
-  const nextDay = new Date(day.getTime() + 24 * 60 * 60 * 1000);
+function toDateParam(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
+/** Competition ids for a sport slug, or undefined if no sport filter was requested. */
+async function resolveCompetitionIds(sportSlug: string | undefined) {
+  if (!sportSlug) return undefined;
+  const sport = await db.query.sports.findFirst({ where: eq(sports.slug, sportSlug) });
+  if (!sport) return [];
+  const rows = await db
+    .select({ id: competitions.id })
+    .from(competitions)
+    .where(eq(competitions.sportId, sport.id));
+  return rows.map((c) => c.id);
+}
+
+async function getFixturesForDay(competitionIds: string[] | undefined, day: Date) {
+  const nextDay = new Date(day.getTime() + 24 * 60 * 60 * 1000);
   const conditions = [
     gte(fixtures.scheduledStartTime, day),
     lt(fixtures.scheduledStartTime, nextDay),
   ];
-
-  if (sportSlug) {
-    const sport = await db.query.sports.findFirst({ where: eq(sports.slug, sportSlug) });
-    if (!sport) return [];
-    const sportCompetitions = await db
-      .select({ id: competitions.id })
-      .from(competitions)
-      .where(eq(competitions.sportId, sport.id));
-    conditions.push(inArray(fixtures.competitionId, sportCompetitions.map((c) => c.id)));
-  }
+  if (competitionIds) conditions.push(inArray(fixtures.competitionId, competitionIds));
 
   return db.query.fixtures.findMany({
     where: and(...conditions),
@@ -45,6 +52,31 @@ async function getFixturesForDay(sportSlug: string | undefined, day: Date) {
   });
 }
 
+/** The nearest date (any sport-filtered fixture) to `day`, preferring the future. */
+async function findNearestFixtureDate(
+  competitionIds: string[] | undefined,
+  day: Date,
+): Promise<Date | null> {
+  const nextDay = new Date(day.getTime() + 24 * 60 * 60 * 1000);
+  const sportCondition = competitionIds ? inArray(fixtures.competitionId, competitionIds) : undefined;
+
+  const [future] = await db
+    .select({ t: fixtures.scheduledStartTime })
+    .from(fixtures)
+    .where(sportCondition ? and(gte(fixtures.scheduledStartTime, nextDay), sportCondition) : gte(fixtures.scheduledStartTime, nextDay))
+    .orderBy(asc(fixtures.scheduledStartTime))
+    .limit(1);
+  if (future) return future.t;
+
+  const [past] = await db
+    .select({ t: fixtures.scheduledStartTime })
+    .from(fixtures)
+    .where(sportCondition ? and(lt(fixtures.scheduledStartTime, day), sportCondition) : lt(fixtures.scheduledStartTime, day))
+    .orderBy(desc(fixtures.scheduledStartTime))
+    .limit(1);
+  return past?.t ?? null;
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -52,7 +84,15 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const day = parseDateParam(params.date);
-  const fixtureRows = await getFixturesForDay(params.sport, day);
+  const competitionIds = await resolveCompetitionIds(params.sport);
+  const fixtureRows = await getFixturesForDay(competitionIds, day);
+
+  const nearestDate =
+    fixtureRows.length === 0 ? await findNearestFixtureDate(competitionIds, day) : null;
+  const nearestDateParam = nearestDate ? toDateParam(nearestDate) : null;
+  const nearestHref = nearestDateParam
+    ? `/?date=${nearestDateParam}${params.sport ? `&sport=${params.sport}` : ""}`
+    : null;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -66,6 +106,19 @@ export default async function Home({
       {fixtureRows.length === 0 ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center text-neutral-400 dark:text-neutral-600">
           <p className="text-sm">No fixtures for this day.</p>
+          {nearestHref && nearestDate && (
+            <Link
+              href={nearestHref}
+              className="text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+            >
+              See fixtures on{" "}
+              {nearestDate.toLocaleDateString(undefined, {
+                weekday: "long",
+                day: "numeric",
+                month: "long",
+              })}
+            </Link>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-3 p-4">
