@@ -95,6 +95,10 @@ change a fixture depends on whether its competition is locked.**
   constraint.
 - Scrapers must be **idempotent**: re-running must update changed fields
   (e.g. rescheduled kickoff) on the existing row, never insert duplicates.
+- Standalone TypeScript scripts run via `tsx` (seed, scrapers) do **not**
+  auto-load `.env` the way Next.js does — invoke them with
+  `tsx --env-file=.env <script>` (already wired into the `npm run db:seed`
+  / `npm run scrape` scripts).
 
 ## Standard Commands
 
@@ -112,7 +116,7 @@ npm run db:migrate       # drizzle-kit migrate
 npm run db:studio        # drizzle-kit studio (browse DB)
 
 # Seed data
-npm run db:seed          # runs src/db/seed.ts
+npm run db:seed          # runs src/db/seed.ts (idempotent, safe to rerun)
 
 # Scrapers
 npm run scrape                        # all adapters
@@ -131,7 +135,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 1.1 Project skeleton (Next.js + TS + Tailwind) & Dockerized Postgres
   - [x] 1.2 Drizzle ORM & core domain schema (sports, competitions, teams,
         venues, fixtures)
-  - [ ] 1.3 Governance schema (fixture_proposals, votes) & seed script
+  - [x] 1.3 Governance schema (fixture_proposals, votes) & seed script
 - **Phase 2 — Scraper-First Pipeline**
   - [ ] 2.1 Base scraper framework & normalized types
   - [ ] 2.2 UK Super League scraper adapter

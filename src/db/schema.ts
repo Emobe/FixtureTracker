@@ -6,9 +6,13 @@ import {
   timestamp,
   doublePrecision,
   jsonb,
+  integer,
+  smallint,
   pgEnum,
+  unique,
+  check,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 
 export const authorityTypeEnum = pgEnum("authority_type", [
   "SCRAPED",
@@ -28,6 +32,17 @@ export const trustStatusEnum = pgEnum("trust_status", [
   "NEEDS_VERIFICATION",
 ]);
 
+export const proposalStatusEnum = pgEnum("proposal_status", [
+  "PENDING",
+  "ACCEPTED",
+  "REJECTED",
+]);
+
+export const voteTargetTypeEnum = pgEnum("vote_target_type", [
+  "FIXTURE",
+  "PROPOSAL",
+]);
+
 export const sports = pgTable("sports", {
   id: uuid("id").primaryKey().defaultRandom(),
   slug: text("slug").notNull().unique(),
@@ -40,7 +55,7 @@ export const sports = pgTable("sports", {
 
 export const venues = pgTable("venues", {
   id: uuid("id").primaryKey().defaultRandom(),
-  name: text("name").notNull(),
+  name: text("name").notNull().unique(),
   address: text("address"),
   city: text("city"),
   country: text("country"),
@@ -121,6 +136,46 @@ export const fixtures = pgTable("fixtures", {
     .defaultNow(),
 });
 
+export const fixtureProposals = pgTable("fixture_proposals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  fixtureId: uuid("fixture_id")
+    .notNull()
+    .references(() => fixtures.id, { onDelete: "cascade" }),
+  proposedStartTime: timestamp("proposed_start_time", { withTimezone: true }),
+  proposedVenueId: uuid("proposed_venue_id").references(() => venues.id, {
+    onDelete: "set null",
+  }),
+  reason: text("reason").notNull(),
+  proofUrl: text("proof_url").notNull(),
+  status: proposalStatusEnum("status").notNull().default("PENDING"),
+  netVotes: integer("net_votes").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const votes = pgTable(
+  "votes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    targetType: voteTargetTypeEnum("target_type").notNull(),
+    targetId: uuid("target_id").notNull(),
+    userId: uuid("user_id").notNull(),
+    direction: smallint("direction").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("votes_user_target_unique").on(
+      table.userId,
+      table.targetType,
+      table.targetId,
+    ),
+    check("votes_direction_check", sql`${table.direction} in (1, -1)`),
+  ],
+);
+
 export const sportsRelations = relations(sports, ({ many }) => ({
   competitions: many(competitions),
   teams: many(teams),
@@ -155,7 +210,7 @@ export const teamsRelations = relations(teams, ({ one, many }) => ({
   awayFixtures: many(fixtures, { relationName: "awayTeamFixtures" }),
 }));
 
-export const fixturesRelations = relations(fixtures, ({ one }) => ({
+export const fixturesRelations = relations(fixtures, ({ one, many }) => ({
   competition: one(competitions, {
     fields: [fixtures.competitionId],
     references: [competitions.id],
@@ -174,4 +229,19 @@ export const fixturesRelations = relations(fixtures, ({ one }) => ({
     fields: [fixtures.venueId],
     references: [venues.id],
   }),
+  proposals: many(fixtureProposals),
 }));
+
+export const fixtureProposalsRelations = relations(
+  fixtureProposals,
+  ({ one }) => ({
+    fixture: one(fixtures, {
+      fields: [fixtureProposals.fixtureId],
+      references: [fixtures.id],
+    }),
+    proposedVenue: one(venues, {
+      fields: [fixtureProposals.proposedVenueId],
+      references: [venues.id],
+    }),
+  }),
+);
