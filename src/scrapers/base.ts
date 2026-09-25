@@ -114,7 +114,8 @@ export abstract class BaseScraper {
     console.error(`[${this.name}] ${message}`, err ?? "");
   }
 
+  /** Logs to stderr so `--dry-run` JSON on stdout stays machine-parseable. */
   protected logInfo(message: string): void {
-    console.log(`[${this.name}] ${message}`);
+    console.error(`[${this.name}] ${message}`);
   }
 }

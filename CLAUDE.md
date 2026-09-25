@@ -99,6 +99,16 @@ change a fixture depends on whether its competition is locked.**
   auto-load `.env` the way Next.js does — invoke them with
   `tsx --env-file=.env <script>` (already wired into the `npm run db:seed`
   / `npm run scrape` scripts).
+- **Super League source note**: superleague.co.uk returns HTTP 500 to
+  non-browser clients on `/fixtures` and `/results` (bot defense), and BBC
+  Sport's equivalent page renders client-side with no fixture data in the
+  initial HTML. The scraper instead reads Wikipedia's
+  `{season}_Super_League_season_results` article, which is static HTML but
+  has irregular table markup: `rowspan` merges the Date/Venue/Attendance
+  cells across same-day fixtures (e.g. Magic Weekend), so parsing walks a
+  rowspan-aware grid rather than fixed cell indices — see
+  `buildFixtureGrid` in `src/scrapers/super-league/index.ts`. Per-fixture
+  broadcaster isn't available from this source.
 
 ## Standard Commands
 
@@ -138,7 +148,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 1.3 Governance schema (fixture_proposals, votes) & seed script
 - **Phase 2 — Scraper-First Pipeline**
   - [x] 2.1 Base scraper framework & normalized types
-  - [ ] 2.2 UK Super League scraper adapter
+  - [x] 2.2 UK Super League scraper adapter
   - [ ] 2.3 GAA All-Ireland scraper adapter
   - [ ] 2.4 Unified ingestion runner CLI (idempotent upserts)
 - **Phase 3 — Public APIs & Calendar Feeds**

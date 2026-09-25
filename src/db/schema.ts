@@ -102,39 +102,55 @@ export const teams = pgTable("teams", {
     .defaultNow(),
 });
 
-export const fixtures = pgTable("fixtures", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  competitionId: uuid("competition_id")
-    .notNull()
-    .references(() => competitions.id, { onDelete: "cascade" }),
-  homeTeamId: uuid("home_team_id")
-    .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
-  awayTeamId: uuid("away_team_id")
-    .notNull()
-    .references(() => teams.id, { onDelete: "cascade" }),
-  venueId: uuid("venue_id").references(() => venues.id, {
-    onDelete: "set null",
-  }),
-  scheduledStartTime: timestamp("scheduled_start_time", {
-    withTimezone: true,
-  }).notNull(),
-  status: fixtureStatusEnum("status").notNull().default("SCHEDULED"),
-  broadcastInfo: text("broadcast_info"),
-  streamUrl: text("stream_url"),
-  homeScoreDisplay: text("home_score_display"),
-  awayScoreDisplay: text("away_score_display"),
-  scoreData: jsonb("score_data"),
-  trustStatus: trustStatusEnum("trust_status")
-    .notNull()
-    .default("NEEDS_VERIFICATION"),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
+export const fixtures = pgTable(
+  "fixtures",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    competitionId: uuid("competition_id")
+      .notNull()
+      .references(() => competitions.id, { onDelete: "cascade" }),
+    homeTeamId: uuid("home_team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    awayTeamId: uuid("away_team_id")
+      .notNull()
+      .references(() => teams.id, { onDelete: "cascade" }),
+    venueId: uuid("venue_id").references(() => venues.id, {
+      onDelete: "set null",
+    }),
+    /**
+     * Stable per-source identifier (e.g. a source site's own match id, or a
+     * synthetic `season-round-homeSlug-awaySlug` key) used to idempotently
+     * upsert fixtures across scraper runs even when the kickoff time or
+     * venue is later rescheduled. Null for community-submitted fixtures.
+     */
+    externalRef: text("external_ref"),
+    scheduledStartTime: timestamp("scheduled_start_time", {
+      withTimezone: true,
+    }).notNull(),
+    status: fixtureStatusEnum("status").notNull().default("SCHEDULED"),
+    broadcastInfo: text("broadcast_info"),
+    streamUrl: text("stream_url"),
+    homeScoreDisplay: text("home_score_display"),
+    awayScoreDisplay: text("away_score_display"),
+    scoreData: jsonb("score_data"),
+    trustStatus: trustStatusEnum("trust_status")
+      .notNull()
+      .default("NEEDS_VERIFICATION"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    unique("fixtures_competition_external_ref_unique").on(
+      table.competitionId,
+      table.externalRef,
+    ),
+  ],
+);
 
 export const fixtureProposals = pgTable("fixture_proposals", {
   id: uuid("id").primaryKey().defaultRandom(),
