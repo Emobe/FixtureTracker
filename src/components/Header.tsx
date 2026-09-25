@@ -1,6 +1,7 @@
 import { Trophy } from "lucide-react";
 import Link from "next/link";
 import { AuthButton } from "./AuthButton";
+import { SearchOverlay } from "./SearchOverlay";
 import { ThemeToggle } from "./ThemeToggle";
 
 export function Header() {
@@ -14,6 +15,7 @@ export function Header() {
           <span className="text-[15px] font-semibold tracking-tight">Fixtures</span>
         </Link>
         <div className="flex items-center gap-1">
+          <SearchOverlay />
           <ThemeToggle />
           <AuthButton />
         </div>

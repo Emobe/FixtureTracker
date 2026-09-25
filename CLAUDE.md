@@ -346,6 +346,16 @@ change a fixture depends on whether its competition is locked.**
   Wikipedia's summary API rate-limits aggressively in a tight loop; if
   backfilling more teams later, space requests out (~1.5s) and retry 429s
   with backoff rather than firing them all at once.
+- **Search**: a header search icon (`SearchOverlay.tsx`) opens a full-width
+  overlay that debounces (250ms) queries of 2+ characters against
+  `GET /api/search?q=...`, which does an `ilike` name match against both
+  `teams` and `competitions` (top 8 each). This is separate from the
+  public `/api/v1/*` REST API (no pagination, no sport filter, not part
+  of that documented contract) — it exists purely to back this one UI.
+  There's no dedicated `/teams` or `/competitions` browse/list page yet
+  (still the known gap noted above), so search is currently the only way
+  to reach a team or competition you don't already have a fixture card
+  link to.
 
 ## Standard Commands
 
