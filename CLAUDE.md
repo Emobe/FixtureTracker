@@ -133,6 +133,24 @@ change a fixture depends on whether its competition is locked.**
   trailing `.ics` — the dynamic segment captures it literally
   (`rugby-league-wigan-warriors.ics`), so the handler strips `.ics` before
   the DB lookup rather than the folder name encoding the extension.
+- **Don't use `next-themes`** for dark mode on this stack — its
+  `ThemeProvider` renders a `<script>` tag from a client component, which
+  trips a React 19 dev-only warning ("script tags are never executed when
+  rendering on the client") on this Next.js 16.3.6 / React 19.2.8 combo.
+  Even a plain server-rendered `<script>` or `next/script` (any strategy)
+  triggers the same *dev console* warning — it's cosmetic noise absent from
+  production builds, not a real bug, so `next/script` is still what
+  `app/layout.tsx` uses for the blocking pre-hydration theme script
+  (`src/lib/theme-script.ts`, applies the saved/system theme class before
+  paint to avoid a flash).
+- **The real bug was separate**: `ThemeToggle` originally read the DOM's
+  actual theme class via a `useState` lazy initializer so its icon would be
+  correct on first paint — but the server has no `document`, so server and
+  first-client-render disagreed, causing a genuine hydration mismatch
+  (React error #418, reproduced in a production build, not just a dev
+  warning). Fixed by always rendering the default (light) icon on first
+  render — matching the server exactly — then correcting from real DOM
+  state in a mount effect. Don't reintroduce the lazy-initializer version.
 
 ## Standard Commands
 
@@ -179,7 +197,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 3.1 Public read-only REST API (`/api/v1/*`)
   - [x] 3.2 Dynamic iCal / webcal subscription feeds
 - **Phase 4 — Mobile-First Fan Portal**
-  - [ ] 4.1 Layout, navigation, sport tabs, date bar
+  - [x] 4.1 Layout, navigation, sport tabs, date bar
   - [ ] 4.2 FixtureCard & match details
   - [ ] 4.3 "Subscribe to Calendar" modal
 - **Phase 5 — Crowdsourcing & Governance**
