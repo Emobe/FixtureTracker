@@ -30,13 +30,13 @@ export default async function CompetitionPage({
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate text-xl font-semibold">{competition.name}</h1>
+      <div className="flex items-center justify-between gap-3 pb-1">
+        <h1 className="truncate text-xl font-bold tracking-tight">{competition.name}</h1>
         <SubscribeCalendarModal kind="competition" slug={competition.slug} name={competition.name} />
       </div>
 
       {rows.length === 0 ? (
-        <p className="py-16 text-center text-sm text-neutral-400 dark:text-neutral-600">
+        <p className="py-16 text-center text-sm text-zinc-400 dark:text-zinc-600">
           No fixtures yet.
         </p>
       ) : (

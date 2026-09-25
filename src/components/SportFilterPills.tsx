@@ -19,7 +19,7 @@ export function SportFilterPills() {
   const pills = [{ slug: null, label: "All" }, ...SPORT_FILTERS];
 
   return (
-    <div className="scrollbar-none flex gap-2 overflow-x-auto px-4 py-3">
+    <div className="scrollbar-none flex gap-2 overflow-x-auto px-4 pt-3 pb-1">
       {pills.map((pill) => {
         const isActive = activeSport === pill.slug;
         return (
@@ -27,10 +27,10 @@ export function SportFilterPills() {
             key={pill.slug ?? "all"}
             type="button"
             onClick={() => select(pill.slug)}
-            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+            className={`tap-active shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
               isActive
-                ? "bg-emerald-600 text-white dark:bg-emerald-500"
-                : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                ? "bg-accent text-accent-foreground"
+                : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
             }`}
           >
             {pill.label}

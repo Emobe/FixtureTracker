@@ -2,6 +2,7 @@
 
 import { MapPin, ShieldCheck, Tv, Users } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 export interface FixtureCardData {
   id: string;
@@ -22,33 +23,47 @@ const MATCH_DURATION_MS = 2 * 60 * 60 * 1000;
 function displayStatus(fixture: FixtureCardData): {
   label: string;
   className: string;
+  dot?: boolean;
 } {
   if (fixture.status === "POSTPONED") {
-    return { label: "Postponed", className: "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300" };
+    return { label: "Postponed", className: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400" };
   }
   if (fixture.status === "CANCELLED") {
-    return { label: "Cancelled", className: "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300" };
+    return { label: "Cancelled", className: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" };
   }
   if (fixture.status === "COMPLETED") {
-    return { label: "Full-time", className: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300" };
+    return { label: "Full-time", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400" };
   }
 
   const start = new Date(fixture.scheduledStartTime).getTime();
   const now = Date.now();
   if (now >= start && now < start + MATCH_DURATION_MS) {
-    return { label: "Live", className: "bg-red-600 text-white" };
+    return { label: "Live", className: "bg-red-600 text-white", dot: true };
   }
-  return { label: "Scheduled", className: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" };
+  return { label: "Upcoming", className: "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-400" };
+}
+
+/** Deterministic hue from a team name, so the same team always gets the same monogram color. */
+function nameHue(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = (hash * 31 + name.charCodeAt(i)) % 360;
+  }
+  return hash;
 }
 
 function TeamCrest({ team }: { team: FixtureCardData["homeTeam"] }) {
   if (team.crestUrl) {
     // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain crest URLs; not worth configuring next/image remote patterns for a placeholder-only field right now.
-    return <img src={team.crestUrl} alt="" className="h-8 w-8 rounded-full object-cover" />;
+    return <img src={team.crestUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />;
   }
   const initials = (team.shortName ?? team.name).slice(0, 2).toUpperCase();
+  const style = { "--team-h": nameHue(team.name) } as CSSProperties;
   return (
-    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+    <span
+      style={style}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--team-h)_65%_92%)] text-xs font-semibold text-[hsl(var(--team-h)_55%_32%)] dark:bg-[hsl(var(--team-h)_35%_20%)] dark:text-[hsl(var(--team-h)_60%_75%)]"
+    >
       {initials}
     </span>
   );
@@ -59,55 +74,64 @@ function mapUrl(venue: NonNullable<FixtureCardData["venue"]>): string {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
+function KickoffTime({ time }: { time: string | Date }) {
+  const date = new Date(time);
+  const clock = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const tzParts = new Intl.DateTimeFormat(undefined, { timeZoneName: "short" }).formatToParts(date);
+  const tz = tzParts.find((p) => p.type === "timeZoneName")?.value ?? "";
+  return (
+    <span suppressHydrationWarning className="flex flex-col items-center">
+      <span className="font-mono text-base font-semibold tabular-nums">{clock}</span>
+      <span className="text-[10px] font-medium text-zinc-400 dark:text-zinc-500">{tz}</span>
+    </span>
+  );
+}
+
 export function FixtureCard({ fixture }: { fixture: FixtureCardData }) {
   const status = displayStatus(fixture);
   const isCompleted = fixture.status === "COMPLETED";
 
   return (
-    <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-      <div className="mb-3 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-        <Link href={`/competitions/${fixture.competition.slug}`} className="truncate hover:text-emerald-600 dark:hover:text-emerald-400">
+    <div className="rounded-2xl border border-border bg-surface p-4 transition-colors">
+      <div className="mb-3 flex items-center justify-between gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+        <Link href={`/competitions/${fixture.competition.slug}`} className="truncate hover:text-accent">
           {fixture.competition.name}
         </Link>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 font-medium ${status.className}`}>
+        <span className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${status.className}`}>
+          {status.dot && <span className="live-dot h-1.5 w-1.5 rounded-full bg-white" />}
           {status.label}
         </span>
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <Link href={`/teams/${fixture.homeTeam.slug}`} className="flex flex-1 items-center gap-2">
+        <Link href={`/teams/${fixture.homeTeam.slug}`} className="flex flex-1 items-center gap-2.5 overflow-hidden">
           <TeamCrest team={fixture.homeTeam} />
-          <span className="truncate text-sm font-medium">{fixture.homeTeam.name}</span>
+          <span className="truncate text-[15px] font-semibold tracking-tight">{fixture.homeTeam.name}</span>
         </Link>
 
-        <div className="shrink-0 px-2 text-center">
+        <div className="shrink-0 px-1 text-center">
           {isCompleted ? (
-            <span className="text-sm font-semibold tabular-nums">
-              {fixture.homeScoreDisplay} - {fixture.awayScoreDisplay}
+            <span className="font-mono text-lg font-bold tabular-nums">
+              {fixture.homeScoreDisplay} – {fixture.awayScoreDisplay}
             </span>
           ) : (
-            <span suppressHydrationWarning className="text-sm font-semibold tabular-nums">
-              {new Date(fixture.scheduledStartTime).toLocaleTimeString(undefined, {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
-            </span>
+            <KickoffTime time={fixture.scheduledStartTime} />
           )}
         </div>
 
-        <Link href={`/teams/${fixture.awayTeam.slug}`} className="flex flex-1 items-center justify-end gap-2">
-          <span className="truncate text-right text-sm font-medium">{fixture.awayTeam.name}</span>
+        <Link href={`/teams/${fixture.awayTeam.slug}`} className="flex flex-1 items-center justify-end gap-2.5 overflow-hidden">
+          <span className="truncate text-right text-[15px] font-semibold tracking-tight">{fixture.awayTeam.name}</span>
           <TeamCrest team={fixture.awayTeam} />
         </Link>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border pt-3 text-xs text-zinc-500 dark:text-zinc-400">
         {fixture.venue && (
           <a
             href={mapUrl(fixture.venue)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 hover:text-emerald-600 dark:hover:text-emerald-400"
+            className="flex items-center gap-1 hover:text-accent"
           >
             <MapPin className="h-3.5 w-3.5" />
             {fixture.venue.name}
@@ -119,17 +143,14 @@ export function FixtureCard({ fixture }: { fixture: FixtureCardData }) {
             {fixture.broadcastInfo}
           </span>
         )}
-        <span className="ml-auto flex items-center gap-1">
+        <span
+          title={fixture.trustStatus === "OFFICIAL" ? "Official, scraped from the league" : "Community submitted"}
+          className="ml-auto flex items-center gap-1 text-zinc-400 dark:text-zinc-500"
+        >
           {fixture.trustStatus === "OFFICIAL" ? (
-            <>
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Official
-            </>
+            <ShieldCheck className="h-3.5 w-3.5" />
           ) : (
-            <>
-              <Users className="h-3.5 w-3.5" />
-              Community
-            </>
+            <Users className="h-3.5 w-3.5" />
           )}
         </span>
       </div>

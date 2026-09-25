@@ -28,13 +28,13 @@ export default async function TeamPage({
 
   return (
     <div className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="truncate text-xl font-semibold">{team.name}</h1>
+      <div className="flex items-center justify-between gap-3 pb-1">
+        <h1 className="truncate text-xl font-bold tracking-tight">{team.name}</h1>
         <SubscribeCalendarModal kind="team" slug={team.slug} name={team.name} />
       </div>
 
       {rows.length === 0 ? (
-        <p className="py-16 text-center text-sm text-neutral-400 dark:text-neutral-600">
+        <p className="py-16 text-center text-sm text-zinc-400 dark:text-zinc-600">
           No fixtures yet.
         </p>
       ) : (
