@@ -171,7 +171,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 2.3 GAA All-Ireland scraper adapter
   - [x] 2.4 Unified ingestion runner CLI (idempotent upserts)
 - **Phase 3 — Public APIs & Calendar Feeds**
-  - [ ] 3.1 Public read-only REST API (`/api/v1/*`)
+  - [x] 3.1 Public read-only REST API (`/api/v1/*`)
   - [ ] 3.2 Dynamic iCal / webcal subscription feeds
 - **Phase 4 — Mobile-First Fan Portal**
   - [ ] 4.1 Layout, navigation, sport tabs, date bar
