@@ -128,6 +128,11 @@ change a fixture depends on whether its competition is locked.**
   crash or `process.exit()` can't kill the others. Idempotency itself
   lives in `upsertFixture` (`fixtures.externalRef`, unique per
   competition), not in the runner.
+- The calendar routes (`/api/calendar/team/[slug]/route.ts` and
+  `.../competition/[slug]/route.ts`) accept the slug with or without a
+  trailing `.ics` — the dynamic segment captures it literally
+  (`rugby-league-wigan-warriors.ics`), so the handler strips `.ics` before
+  the DB lookup rather than the folder name encoding the extension.
 
 ## Standard Commands
 
@@ -172,7 +177,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 2.4 Unified ingestion runner CLI (idempotent upserts)
 - **Phase 3 — Public APIs & Calendar Feeds**
   - [x] 3.1 Public read-only REST API (`/api/v1/*`)
-  - [ ] 3.2 Dynamic iCal / webcal subscription feeds
+  - [x] 3.2 Dynamic iCal / webcal subscription feeds
 - **Phase 4 — Mobile-First Fan Portal**
   - [ ] 4.1 Layout, navigation, sport tabs, date bar
   - [ ] 4.2 FixtureCard & match details
