@@ -29,12 +29,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">
+      <body className="flex min-h-full flex-col bg-background text-foreground">
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}
         </Script>
         <Header />
-        <main className="mx-auto w-full max-w-3xl flex-1 pb-20 md:pb-6">
+        <main className="mx-auto w-full max-w-3xl flex-1 pb-24 md:pb-10">
           {children}
         </main>
         <BottomNav />

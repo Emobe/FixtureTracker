@@ -44,7 +44,7 @@ export function DateBar() {
   }
 
   return (
-    <div className="scrollbar-none flex items-center gap-2 overflow-x-auto border-t border-neutral-100 px-4 py-3 dark:border-neutral-900">
+    <div className="scrollbar-none flex items-center gap-2 overflow-x-auto border-b border-border px-4 pt-1 pb-3">
       {quickPicks.map((pick) => {
         const isActive = selected === pick.value;
         return (
@@ -52,10 +52,10 @@ export function DateBar() {
             key={pick.label}
             type="button"
             onClick={() => selectDate(pick.value)}
-            className={`shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+            className={`tap-active shrink-0 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
               isActive
-                ? "border-emerald-600 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950 dark:text-emerald-300"
-                : "border-neutral-200 text-neutral-600 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border text-zinc-500 hover:bg-zinc-50 dark:text-zinc-400 dark:hover:bg-zinc-900"
             }`}
           >
             {pick.label}
@@ -66,7 +66,7 @@ export function DateBar() {
         type="date"
         value={selected}
         onChange={(e) => e.target.value && selectDate(e.target.value)}
-        className="shrink-0 rounded-full border border-neutral-200 bg-transparent px-3 py-1.5 text-sm text-neutral-600 dark:border-neutral-800 dark:text-neutral-300"
+        className="tap-active shrink-0 rounded-full border border-border bg-transparent px-3 py-1.5 text-sm text-zinc-500 dark:text-zinc-400"
         aria-label="Pick a date"
       />
     </div>

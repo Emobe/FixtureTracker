@@ -104,13 +104,10 @@ export default async function Home({
       </Suspense>
 
       {fixtureRows.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-16 text-center text-neutral-400 dark:text-neutral-600">
-          <p className="text-sm">No fixtures for this day.</p>
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-20 text-center">
+          <p className="text-sm text-zinc-400 dark:text-zinc-600">No fixtures for this day.</p>
           {nearestHref && nearestDate && (
-            <Link
-              href={nearestHref}
-              className="text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400"
-            >
+            <Link href={nearestHref} className="text-sm font-medium text-accent hover:underline">
               See fixtures on{" "}
               {nearestDate.toLocaleDateString(undefined, {
                 weekday: "long",
