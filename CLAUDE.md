@@ -255,8 +255,34 @@ change a fixture depends on whether its competition is locked.**
   was a deliberate scope call to avoid threading a bound `signIn` server
   action through three different pages into `FixtureCard`; revisit if it
   becomes a real UX complaint.
-
-## Standard Commands
+- **PWA & offline support (6.1)**: `src/app/manifest.ts` uses Next's file
+  convention (not a static `public/manifest.json`) — Next serves it at
+  `/manifest.webmanifest` and auto-injects the `<link rel="manifest">`
+  itself, so don't also set `metadata.manifest` (that produced a
+  duplicate/wrong link when tried). Icons (`public/icon-192.png`,
+  `icon-512.png`, `icon-512-maskable.png`, `apple-touch-icon.png`) were
+  rasterized once from `public/icon.svg` via a throwaway script using
+  `sharp` (already a transitive dependency of Next's image
+  optimization — not added to `package.json`); regenerate them the same
+  way if `icon.svg` ever changes, there's no build-time step that does
+  this automatically. iOS install support comes from
+  `metadata.appleWebApp` in `src/app/layout.tsx` — Next 16 emits the
+  modern `mobile-web-app-capable` meta tag (not the deprecated
+  `apple-mobile-web-app-capable`) plus the Apple-specific title/status-bar
+  tags; this is correct, not a regression, if you go looking for the old
+  tag name. Offline caching is a **hand-rolled** service worker
+  (`public/sw.js`, registered by `src/components/ServiceWorkerRegister.tsx`)
+  rather than `next-pwa` — that plugin's Webpack-era integration doesn't
+  have a clean Turbopack story yet. It's deliberately simple: network-first
+  for navigations and API/RSC data requests (falling back to the last
+  cached response, or `/offline` if nothing is cached), cache-first for
+  hashed `/_next/static/` assets. `/offline` (`src/app/offline/page.tsx`)
+  is precached on SW install specifically so it's available even on a
+  first-ever visit that immediately goes offline. Verified by actually
+  killing the dev server (not devtools network throttling, which these
+  tools can't drive) and confirming a previously-visited page still
+  rendered fully while an unvisited one fell back to `/offline`, then
+  confirming a normal page load again once the server came back.
 
 ```bash
 # Local database (host port 5433 -> container 5432; 5433 avoids clashing
@@ -309,7 +335,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 5.2 Grassroots fixture submission form (locked-competition block)
   - [x] 5.3 Community verification & upvoting (+3 promotion rule)
 - **Phase 6 — Production Polish & PWA**
-  - [ ] 6.1 PWA manifest & offline support
+  - [x] 6.1 PWA manifest & offline support
   - [ ] 6.2 Automated ingestion cron (`/api/cron/scrape` + GitHub Actions)
 
 See `plan.md` for full scope details and the exact Claude-Code prompt text
