@@ -1,6 +1,7 @@
 "use client";
 
 import { MapPin, ShieldCheck, Tv, Users } from "lucide-react";
+import Link from "next/link";
 
 export interface FixtureCardData {
   id: string;
@@ -10,9 +11,9 @@ export interface FixtureCardData {
   broadcastInfo: string | null;
   homeScoreDisplay: string | null;
   awayScoreDisplay: string | null;
-  competition: { name: string };
-  homeTeam: { name: string; shortName: string | null; crestUrl: string | null };
-  awayTeam: { name: string; shortName: string | null; crestUrl: string | null };
+  competition: { slug: string; name: string };
+  homeTeam: { slug: string; name: string; shortName: string | null; crestUrl: string | null };
+  awayTeam: { slug: string; name: string; shortName: string | null; crestUrl: string | null };
   venue: { name: string; city: string | null; country: string | null } | null;
 }
 
@@ -65,17 +66,19 @@ export function FixtureCard({ fixture }: { fixture: FixtureCardData }) {
   return (
     <div className="rounded-xl border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
       <div className="mb-3 flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-        <span className="truncate">{fixture.competition.name}</span>
+        <Link href={`/competitions/${fixture.competition.slug}`} className="truncate hover:text-emerald-600 dark:hover:text-emerald-400">
+          {fixture.competition.name}
+        </Link>
         <span className={`shrink-0 rounded-full px-2 py-0.5 font-medium ${status.className}`}>
           {status.label}
         </span>
       </div>
 
       <div className="flex items-center justify-between gap-3">
-        <div className="flex flex-1 items-center gap-2">
+        <Link href={`/teams/${fixture.homeTeam.slug}`} className="flex flex-1 items-center gap-2">
           <TeamCrest team={fixture.homeTeam} />
           <span className="truncate text-sm font-medium">{fixture.homeTeam.name}</span>
-        </div>
+        </Link>
 
         <div className="shrink-0 px-2 text-center">
           {isCompleted ? (
@@ -92,10 +95,10 @@ export function FixtureCard({ fixture }: { fixture: FixtureCardData }) {
           )}
         </div>
 
-        <div className="flex flex-1 items-center justify-end gap-2">
+        <Link href={`/teams/${fixture.awayTeam.slug}`} className="flex flex-1 items-center justify-end gap-2">
           <span className="truncate text-right text-sm font-medium">{fixture.awayTeam.name}</span>
           <TeamCrest team={fixture.awayTeam} />
-        </div>
+        </Link>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-500 dark:text-neutral-400">

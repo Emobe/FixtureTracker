@@ -37,9 +37,9 @@ async function getFixturesForDay(sportSlug: string | undefined, day: Date) {
     where: and(...conditions),
     orderBy: asc(fixtures.scheduledStartTime),
     with: {
-      competition: { columns: { name: true } },
-      homeTeam: { columns: { name: true, shortName: true, crestUrl: true } },
-      awayTeam: { columns: { name: true, shortName: true, crestUrl: true } },
+      competition: { columns: { slug: true, name: true } },
+      homeTeam: { columns: { slug: true, name: true, shortName: true, crestUrl: true } },
+      awayTeam: { columns: { slug: true, name: true, shortName: true, crestUrl: true } },
       venue: { columns: { name: true, city: true, country: true } },
     },
   });

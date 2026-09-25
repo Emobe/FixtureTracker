@@ -162,6 +162,15 @@ change a fixture depends on whether its competition is locked.**
   viewer's local day — a fixture just after midnight UTC-local-evening can
   land on what looks like the "wrong" day for some timezones. Acceptable
   for now; revisit only if it becomes a real complaint.
+- **`/teams/[slug]` and `/competitions/[slug]` pages exist** (added in 4.3)
+  even though the plan never allocated them their own sub-phase — the
+  "Subscribe" button needed for 4.3 has to live somewhere, and "team pages
+  and competition headers" per the plan's own 4.3 prompt implies they
+  exist. Each is a minimal Server Component: header + Subscribe button +
+  that team's/competition's fixtures via `FixtureCard`. `FixtureCard`'s
+  team name and competition name link here. There's still no `/teams` or
+  `/competitions` *list* page — `BottomNav`'s "Teams" entry stays disabled
+  until one exists.
 
 ## Standard Commands
 
@@ -210,7 +219,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
 - **Phase 4 — Mobile-First Fan Portal**
   - [x] 4.1 Layout, navigation, sport tabs, date bar
   - [x] 4.2 FixtureCard & match details
-  - [ ] 4.3 "Subscribe to Calendar" modal
+  - [x] 4.3 "Subscribe to Calendar" modal
 - **Phase 5 — Crowdsourcing & Governance**
   - [ ] 5.1 Auth.js authentication setup
   - [ ] 5.2 Grassroots fixture submission form (locked-competition block)
