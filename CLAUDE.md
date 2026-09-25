@@ -109,6 +109,20 @@ change a fixture depends on whether its competition is locked.**
   rowspan-aware grid rather than fixed cell indices — see
   `buildFixtureGrid` in `src/scrapers/super-league/index.ts`. Per-fixture
   broadcaster isn't available from this source.
+- **GAA source note**: gaa.ie/fixtures-results has no public JSON API — the
+  match data is embedded in the initial HTML as a React Server Components
+  "flight" payload (`self.__next_f.push([id, "..."])` script tags). A given
+  flight id's pushes must be concatenated *before* splitting on `\n` into
+  individual `<hex>:<json>` records; treating each `push()` call as a
+  self-contained JSON fragment is unreliable — the chunk boundary shifts
+  between requests. See `extractMatches` in `src/scrapers/gaa/index.ts`.
+  Also note: `matchStartDate` always carries a `+00:00` suffix even though
+  the time-of-day is Irish *local* kickoff time, not true UTC.
+- **Team slugs are namespaced per sport** (e.g. `gaa-football-cork` vs.
+  `gaa-hurling-cork`), not just per name — `teams.slug` is globally unique,
+  and the same name (a GAA county, etc.) can field separate teams across
+  different sports. Always pass `sportSlug` to `getOrCreateTeam`
+  (`src/scrapers/db-helpers.ts`).
 
 ## Standard Commands
 
@@ -149,7 +163,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
 - **Phase 2 — Scraper-First Pipeline**
   - [x] 2.1 Base scraper framework & normalized types
   - [x] 2.2 UK Super League scraper adapter
-  - [ ] 2.3 GAA All-Ireland scraper adapter
+  - [x] 2.3 GAA All-Ireland scraper adapter
   - [ ] 2.4 Unified ingestion runner CLI (idempotent upserts)
 - **Phase 3 — Public APIs & Calendar Feeds**
   - [ ] 3.1 Public read-only REST API (`/api/v1/*`)

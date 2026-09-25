@@ -220,10 +220,12 @@ async function persist(season: number, scraped: SuperLeagueFixture[]) {
   for (const fixture of scraped) {
     const homeTeam = await getOrCreateTeam({
       sportId: sport.id,
+      sportSlug: SPORT_SLUG,
       name: fixture.homeTeam,
     });
     const awayTeam = await getOrCreateTeam({
       sportId: sport.id,
+      sportSlug: SPORT_SLUG,
       name: fixture.awayTeam,
     });
     const venue = fixture.venueName

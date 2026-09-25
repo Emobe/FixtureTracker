@@ -86,10 +86,14 @@ export async function getOrCreateVenue(
 
 export async function getOrCreateTeam(params: {
   sportId: string;
+  /** Sport slug (e.g. "gaa-football"), namespacing the team slug so the
+   *  same name under different sports (e.g. a county's football vs.
+   *  hurling team) doesn't collide on the globally-unique `teams.slug`. */
+  sportSlug: string;
   name: string;
   shortName?: string | null;
 }) {
-  const slug = slugify(params.name);
+  const slug = `${params.sportSlug}-${slugify(params.name)}`;
   const existing = await db.query.teams.findFirst({
     where: eq(teams.slug, slug),
   });
