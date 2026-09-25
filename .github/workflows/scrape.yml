@@ -1,0 +1,17 @@
+name: Scheduled fixture scrape
+
+on:
+  schedule:
+    # Hourly, on the hour, UTC.
+    - cron: "0 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger the cron scrape endpoint
+        run: |
+          curl --fail --show-error --silent \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.SCRAPE_BASE_URL }}/api/cron/scrape"

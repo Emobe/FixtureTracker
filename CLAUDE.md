@@ -283,6 +283,43 @@ change a fixture depends on whether its competition is locked.**
   tools can't drive) and confirming a previously-visited page still
   rendered fully while an unvisited one fell back to `/offline`, then
   confirming a normal page load again once the server came back.
+- **Cron ingestion (6.2)**: `src/scrapers/runner.ts` (the CLI) and
+  `src/app/api/cron/scrape/route.ts` (the cron endpoint) now share
+  `src/scrapers/run-adapters.ts` (`ADAPTERS` + `runAdapter`) instead of
+  the runner duplicating that logic — the route calls `runAdapter` with
+  `capture: true` per adapter and returns a JSON summary (`{ league,
+  success, exitCode, log }[]`), while the CLI keeps streaming
+  (`inherit`) output. **Don't use `require.resolve("tsx/cli")`** to find
+  tsx's own CLI entry (needed because both the runner and the route spawn
+  it as a child process to run each `.ts` adapter file directly) — a
+  literal `require.resolve("tsx/cli")` makes Turbopack's build-time
+  tracer try to inline tsx's entire internals (including its esbuild
+  binary) into the cron route's bundle ("Unknown module type"); a
+  computed specifier (`["tsx","cli"].join("/")`) dodges that but then
+  fails *at runtime* instead, because Turbopack's compiled `require` shim
+  rejects any non-literal specifier as "too dynamic". `resolveTsxCli()`
+  in `run-adapters.ts` sidesteps both by walking `node_modules` with
+  plain `fs.existsSync` checks — no module resolution machinery involved,
+  so neither bundler nor runtime ever sees a `require()` call on tsx
+  itself. For the same reason, `ADAPTERS[].entry` is built from
+  `process.cwd()` rather than `__dirname` — `__dirname` is the real
+  `src/scrapers` directory when this module runs under the plain `tsx`
+  CLI, but resolves to wherever Turbopack physically places the bundled
+  chunk (under `.next/server/`) when the same module is imported by the
+  Next-bundled route handler; `process.cwd()` is the project root in both
+  cases. The route is unauthenticated-safe only because of the
+  `CRON_SECRET` bearer-token check — there's no other access control on
+  `/api/cron/scrape`. **Setting up the actual scheduled trigger is a
+  manual step for whoever deploys this** — `.github/workflows/scrape.yml`
+  needs `CRON_SECRET` and `SCRAPE_BASE_URL` (the deployed app's base URL)
+  added as GitHub repo secrets; this repo has no deployment configured,
+  so there's nothing for the workflow to hit yet. Verified locally by
+  running the plan's own verification command
+  (`curl -H "Authorization: Bearer test_secret" .../api/cron/scrape`)
+  against the real scrapers (not a mock) — both adapters ran, parsed live
+  data, and idempotently updated existing fixture rows (0 inserted, as
+  expected since they were already seeded) — and by confirming
+  `npm run scrape` still works unchanged after the `runner.ts` refactor.
 
 ```bash
 # Local database (host port 5433 -> container 5432; 5433 avoids clashing
@@ -336,7 +373,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
   - [x] 5.3 Community verification & upvoting (+3 promotion rule)
 - **Phase 6 — Production Polish & PWA**
   - [x] 6.1 PWA manifest & offline support
-  - [ ] 6.2 Automated ingestion cron (`/api/cron/scrape` + GitHub Actions)
+  - [x] 6.2 Automated ingestion cron (`/api/cron/scrape` + GitHub Actions)
 
 See `plan.md` for full scope details and the exact Claude-Code prompt text
 for each sub-phase.

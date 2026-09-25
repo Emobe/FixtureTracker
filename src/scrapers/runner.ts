@@ -5,49 +5,11 @@
  *   npm run scrape -- --league=super-league
  *   npm run scrape -- --league=gaa
  *   npm run scrape -- --dry-run           # forwarded to each adapter
+ *
+ * See run-adapters.ts for the shared adapter list and child-process
+ * runner also used by the cron route (src/app/api/cron/scrape/route.ts).
  */
-import { spawn } from "node:child_process";
-import path from "node:path";
-
-interface Adapter {
-  key: string;
-  label: string;
-  entry: string;
-}
-
-const ADAPTERS: Adapter[] = [
-  {
-    key: "super-league",
-    label: "Betfred Super League (Rugby League)",
-    entry: path.join(__dirname, "super-league", "index.ts"),
-  },
-  {
-    key: "gaa",
-    label: "GAA All-Ireland Senior Championship (Football & Hurling)",
-    entry: path.join(__dirname, "gaa", "index.ts"),
-  },
-];
-
-function runAdapter(adapter: Adapter, extraArgs: string[]): Promise<number> {
-  return new Promise((resolve) => {
-    console.log(`\n=== ${adapter.label} ===`);
-    const child = spawn(
-      process.execPath,
-      [
-        require.resolve("tsx/cli"),
-        "--env-file=.env",
-        adapter.entry,
-        ...extraArgs,
-      ],
-      { stdio: "inherit" },
-    );
-    child.on("exit", (code) => resolve(code ?? 1));
-    child.on("error", (err) => {
-      console.error(`[runner] failed to start ${adapter.key}:`, err);
-      resolve(1);
-    });
-  });
-}
+import { ADAPTERS, runAdapter } from "./run-adapters";
 
 async function main() {
   const args = process.argv.slice(2);
@@ -68,9 +30,10 @@ async function main() {
 
   let exitCode = 0;
   for (const adapter of adapters) {
-    const code = await runAdapter(adapter, passthroughArgs);
-    if (code !== 0) {
-      console.error(`[runner] ${adapter.key} exited with code ${code}`);
+    console.log(`\n=== ${adapter.label} ===`);
+    const result = await runAdapter(adapter, passthroughArgs);
+    if (result.exitCode !== 0) {
+      console.error(`[runner] ${adapter.key} exited with code ${result.exitCode}`);
       exitCode = 1;
     }
   }
