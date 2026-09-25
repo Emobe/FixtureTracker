@@ -1,11 +1,13 @@
 import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import Link from "next/link";
 import { Suspense } from "react";
+import { auth } from "@/auth";
 import { DateBar } from "@/components/DateBar";
 import { FixtureCard } from "@/components/FixtureCard";
 import { SportFilterPills } from "@/components/SportFilterPills";
 import { db } from "@/db";
 import { competitions, fixtures, sports } from "@/db/schema";
+import { getVoteInfoForFixtures } from "@/lib/votes";
 
 function parseDateParam(value: string | undefined): Date {
   if (value) {
@@ -87,6 +89,12 @@ export default async function Home({
   const competitionIds = await resolveCompetitionIds(params.sport);
   const fixtureRows = await getFixturesForDay(competitionIds, day);
 
+  const session = await auth();
+  const voteInfo = await getVoteInfoForFixtures(
+    fixtureRows.map((f) => f.id),
+    session?.user?.id,
+  );
+
   const nearestDate =
     fixtureRows.length === 0 ? await findNearestFixtureDate(competitionIds, day) : null;
   const nearestDateParam = nearestDate ? toDateParam(nearestDate) : null;
@@ -120,7 +128,13 @@ export default async function Home({
       ) : (
         <div className="flex flex-col gap-3 p-4">
           {fixtureRows.map((fixture) => (
-            <FixtureCard key={fixture.id} fixture={fixture} />
+            <FixtureCard
+              key={fixture.id}
+              fixture={fixture}
+              netVotes={voteInfo[fixture.id]?.netVotes}
+              userVote={voteInfo[fixture.id]?.userVote}
+              canInteract={!!session?.user}
+            />
           ))}
         </div>
       )}

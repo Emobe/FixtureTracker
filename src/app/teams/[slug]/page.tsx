@@ -1,9 +1,11 @@
 import { asc, eq, or } from "drizzle-orm";
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
 import { FixtureCard } from "@/components/FixtureCard";
 import { SubscribeCalendarModal } from "@/components/SubscribeCalendarModal";
 import { db } from "@/db";
 import { fixtures, teams } from "@/db/schema";
+import { getVoteInfoForFixtures } from "@/lib/votes";
 
 export default async function TeamPage({
   params,
@@ -26,6 +28,12 @@ export default async function TeamPage({
     },
   });
 
+  const session = await auth();
+  const voteInfo = await getVoteInfoForFixtures(
+    rows.map((f) => f.id),
+    session?.user?.id,
+  );
+
   return (
     <div className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between gap-3 pb-1">
@@ -38,7 +46,15 @@ export default async function TeamPage({
           No fixtures yet.
         </p>
       ) : (
-        rows.map((fixture) => <FixtureCard key={fixture.id} fixture={fixture} />)
+        rows.map((fixture) => (
+          <FixtureCard
+            key={fixture.id}
+            fixture={fixture}
+            netVotes={voteInfo[fixture.id]?.netVotes}
+            userVote={voteInfo[fixture.id]?.userVote}
+            canInteract={!!session?.user}
+          />
+        ))
       )}
     </div>
   );

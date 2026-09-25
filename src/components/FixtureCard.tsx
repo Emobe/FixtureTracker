@@ -1,8 +1,11 @@
 "use client";
 
-import { MapPin, ShieldCheck, Tv, Users } from "lucide-react";
+import { ChevronDown, ChevronUp, MapPin, ShieldCheck, Tv, Users } from "lucide-react";
 import Link from "next/link";
-import type { CSSProperties } from "react";
+import { useRouter } from "next/navigation";
+import { type CSSProperties, useTransition } from "react";
+import { castVoteAction } from "@/app/actions/vote";
+import { ReportDiscrepancyModal } from "./ReportDiscrepancyModal";
 
 export interface FixtureCardData {
   id: string;
@@ -87,7 +90,68 @@ function KickoffTime({ time }: { time: string | Date }) {
   );
 }
 
-export function FixtureCard({ fixture }: { fixture: FixtureCardData }) {
+function VoteWidget({
+  fixtureId,
+  netVotes,
+  userVote,
+  canInteract,
+}: {
+  fixtureId: string;
+  netVotes: number;
+  userVote: 1 | -1 | null;
+  canInteract: boolean;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function vote(direction: 1 | -1) {
+    if (!canInteract || isPending) return;
+    startTransition(async () => {
+      await castVoteAction(fixtureId, direction);
+      router.refresh();
+    });
+  }
+
+  return (
+    <span className="flex items-center gap-1">
+      <button
+        type="button"
+        onClick={() => vote(1)}
+        disabled={!canInteract}
+        title={canInteract ? "Upvote" : "Sign in from the header to vote"}
+        className={`tap-active rounded-full p-0.5 transition-colors disabled:opacity-40 ${
+          userVote === 1 ? "text-accent" : "text-zinc-400 hover:text-accent dark:text-zinc-500"
+        }`}
+      >
+        <ChevronUp className="h-3.5 w-3.5" />
+      </button>
+      <span className="min-w-[1ch] text-center font-mono tabular-nums">{netVotes}</span>
+      <button
+        type="button"
+        onClick={() => vote(-1)}
+        disabled={!canInteract}
+        title={canInteract ? "Downvote" : "Sign in from the header to vote"}
+        className={`tap-active rounded-full p-0.5 transition-colors disabled:opacity-40 ${
+          userVote === -1 ? "text-red-500" : "text-zinc-400 hover:text-red-500 dark:text-zinc-500"
+        }`}
+      >
+        <ChevronDown className="h-3.5 w-3.5" />
+      </button>
+    </span>
+  );
+}
+
+export function FixtureCard({
+  fixture,
+  netVotes = 0,
+  userVote = null,
+  canInteract = false,
+}: {
+  fixture: FixtureCardData;
+  netVotes?: number;
+  userVote?: 1 | -1 | null;
+  canInteract?: boolean;
+}) {
   const status = displayStatus(fixture);
   const isCompleted = fixture.status === "COMPLETED";
 
@@ -143,15 +207,37 @@ export function FixtureCard({ fixture }: { fixture: FixtureCardData }) {
             {fixture.broadcastInfo}
           </span>
         )}
-        <span
-          title={fixture.trustStatus === "OFFICIAL" ? "Official, scraped from the league" : "Community submitted"}
-          className="ml-auto flex items-center gap-1 text-zinc-400 dark:text-zinc-500"
-        >
+        <span className="ml-auto flex items-center gap-3">
           {fixture.trustStatus === "OFFICIAL" ? (
-            <ShieldCheck className="h-3.5 w-3.5" />
+            <ReportDiscrepancyModal fixtureId={fixture.id} canInteract={canInteract} />
           ) : (
-            <Users className="h-3.5 w-3.5" />
+            <VoteWidget
+              fixtureId={fixture.id}
+              netVotes={netVotes}
+              userVote={userVote}
+              canInteract={canInteract}
+            />
           )}
+          <span
+            title={
+              fixture.trustStatus === "OFFICIAL"
+                ? "Official, scraped from the league"
+                : fixture.trustStatus === "COMMUNITY_VERIFIED"
+                  ? "Community verified (+3 net votes)"
+                  : "Community submitted, awaiting verification"
+            }
+            className="flex items-center gap-1 text-zinc-400 dark:text-zinc-500"
+          >
+            {fixture.trustStatus === "OFFICIAL" ? (
+              <ShieldCheck className="h-3.5 w-3.5" />
+            ) : (
+              <Users
+                className={`h-3.5 w-3.5 ${
+                  fixture.trustStatus === "COMMUNITY_VERIFIED" ? "text-emerald-500 dark:text-emerald-400" : ""
+                }`}
+              />
+            )}
+          </span>
         </span>
       </div>
     </div>

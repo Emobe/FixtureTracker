@@ -228,6 +228,33 @@ change a fixture depends on whether its competition is locked.**
 - The seed script (`src/db/seed.ts`) also creates one unlocked
   `roller-derby-community-league-2026` competition — without it there is
   nothing for the submission form's competition picker to list.
+- **Voting & verification (5.3)**: `fixtures` has no stored net-vote
+  counter (only `fixture_proposals.netVotes` exists, and that's unused by
+  this flow) — net votes are computed on demand with a `sum(direction)`
+  query in `src/lib/votes.ts` (`getVoteInfoForFixtures` for batched
+  reads, `castVoteForUser` for the write path + the +3 auto-promotion
+  check). `castVoteForUser` is a plain async function, not itself a
+  Server Action — `src/app/actions/vote.ts`'s `castVoteAction` is a thin
+  wrapper that resolves `session.user.id` from `auth()` and delegates to
+  it. This split exists so the vote/promotion logic can be exercised
+  directly from multiple simulated users without needing that many real
+  signed-in sessions; keep using `castVoteForUser` for that rather than
+  re-deriving the logic. Clicking the same direction twice removes the
+  vote (toggle off); clicking the opposite direction flips it — there's
+  no separate "remove vote" control.
+  `FixtureCard` shows the vote widget (▲ count ▼) only for non-`OFFICIAL`
+  fixtures and a "Report" button only for `OFFICIAL` ones — this is
+  purely a `trustStatus` check, no extra join needed, since only scraped
+  fixtures are ever `OFFICIAL` in this domain model. Both the vote action
+  and the Report Discrepancy action (`src/app/actions/report-discrepancy.ts`)
+  re-check `competition.isLocked` server-side as defense in depth, mirroring
+  the same pattern from 5.2. There's no dedicated "sign in to interact"
+  prompt wired into the vote/report buttons themselves (unlike the
+  submission modal, which does have one) — signed-out users just see them
+  disabled with a tooltip pointing at the header's sign-in button. This
+  was a deliberate scope call to avoid threading a bound `signIn` server
+  action through three different pages into `FixtureCard`; revisit if it
+  becomes a real UX complaint.
 
 ## Standard Commands
 
@@ -280,7 +307,7 @@ command (`git commit -m "feat: complete phase X.Y"`).
 - **Phase 5 — Crowdsourcing & Governance**
   - [x] 5.1 Auth.js authentication setup
   - [x] 5.2 Grassroots fixture submission form (locked-competition block)
-  - [ ] 5.3 Community verification & upvoting (+3 promotion rule)
+  - [x] 5.3 Community verification & upvoting (+3 promotion rule)
 - **Phase 6 — Production Polish & PWA**
   - [ ] 6.1 PWA manifest & offline support
   - [ ] 6.2 Automated ingestion cron (`/api/cron/scrape` + GitHub Actions)
