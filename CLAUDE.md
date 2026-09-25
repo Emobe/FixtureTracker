@@ -99,15 +99,17 @@ change a fixture depends on whether its competition is locked.**
 ## Standard Commands
 
 ```bash
-# Local database
+# Local database (host port 5433 -> container 5432; 5433 avoids clashing
+# with a native Postgres service already running on this machine)
 docker compose up -d
 
 # Dev server
 npm run dev
 
 # Schema / migrations
-npx drizzle-kit generate
-npx drizzle-kit migrate
+npm run db:generate      # drizzle-kit generate
+npm run db:migrate       # drizzle-kit migrate
+npm run db:studio        # drizzle-kit studio (browse DB)
 
 # Seed data
 npm run db:seed          # runs src/db/seed.ts
@@ -126,8 +128,8 @@ Work sequentially. Commit after each sub-phase passes its verification
 command (`git commit -m "feat: complete phase X.Y"`).
 
 - **Phase 1 — Foundation & Database**
-  - [ ] 1.1 Project skeleton (Next.js + TS + Tailwind) & Dockerized Postgres
-  - [ ] 1.2 Drizzle ORM & core domain schema (sports, competitions, teams,
+  - [x] 1.1 Project skeleton (Next.js + TS + Tailwind) & Dockerized Postgres
+  - [x] 1.2 Drizzle ORM & core domain schema (sports, competitions, teams,
         venues, fixtures)
   - [ ] 1.3 Governance schema (fixture_proposals, votes) & seed script
 - **Phase 2 — Scraper-First Pipeline**
