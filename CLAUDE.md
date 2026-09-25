@@ -1,0 +1,154 @@
+# CLAUDE.md
+
+Guidance for Claude Code when working in this repository.
+
+## Project Overview
+
+A mobile-first sports fixture and calendar platform for under-served sports:
+GAA Football & Hurling, Rugby League / Super League, Roller Derby, and grassroots
+club sports. Fixtures come from two sources — automated scrapers for official
+leagues, and community submissions for grassroots competitions — and are
+delivered via a public REST API, dynamic iCal/webcal feeds, and a Next.js web
+portal.
+
+Full phased plan: `plan.md`. Work through it **one sub-phase at a time**, in
+order, running that sub-phase's verification command before moving on.
+
+## Tech Stack
+
+- **Framework**: Next.js 16 (App Router, Server Components, Server Actions).
+  `agentRules: false` is set in `next.config.ts` to stop `next dev` from
+  auto-generating its own agent-rules block into this file.
+- **Styling**: Tailwind CSS + Lucide Icons + Shadcn UI primitives
+- **Database & ORM**: PostgreSQL 16 (Docker Compose) + Drizzle ORM
+- **Auth**: Auth.js / NextAuth (OAuth & Magic Links)
+- **Calendar**: `ical-generator` for RFC 5545 `.ics` / `webcal://` feeds
+- **Scrapers**: Modular Node/TypeScript adapters using `cheerio` + native `fetch`
+
+## Project Structure
+
+```text
+sports-fixtures/
+├── docker-compose.yml       # Local Postgres container
+├── drizzle.config.ts        # Drizzle migration configuration
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── v1/          # Public REST API (fixtures, teams, competitions)
+│   │   │   └── calendar/    # Dynamic .ics / webcal endpoints
+│   │   ├── (web)/           # Public web UI routes
+│   │   └── layout.tsx
+│   ├── components/          # FixtureCard, CalendarModal, etc.
+│   ├── db/
+│   │   ├── index.ts         # Drizzle client instance
+│   │   └── schema.ts        # Full database schema & relationships
+│   ├── lib/
+│   │   ├── calendar.ts      # iCal event formatting utilities
+│   │   └── timezones.ts     # Localized date-time helpers
+│   └── scrapers/
+│       ├── base.ts          # Base adapter interface & HTTP client
+│       ├── gaa/
+│       ├── super-league/
+│       └── runner.ts        # CLI runner (`npm run scrape`)
+└── package.json
+```
+
+## Core Domain Model
+
+- `sports` — id, slug, name, icon
+- `competitions` — id, sportId, slug, name, season, **isLocked**, authorityType
+  (`SCRAPED` | `COMMUNITY`), websiteUrl
+- `teams` — id, sportId, slug, name, shortName, crestUrl, homeVenueId
+- `venues` — id, name, address, city, country, latitude, longitude, timezone
+- `fixtures` — id, competitionId, homeTeamId, awayTeamId, venueId,
+  scheduledStartTime, status (`SCHEDULED` | `POSTPONED` | `CANCELLED` |
+  `COMPLETED`), broadcastInfo, streamUrl, homeScoreDisplay, awayScoreDisplay,
+  scoreData (jsonb), **trustStatus** (`OFFICIAL` | `COMMUNITY_VERIFIED` |
+  `NEEDS_VERIFICATION`)
+- `fixture_proposals` — id, fixtureId, proposedStartTime, proposedVenueId,
+  reason, proofUrl, status, netVotes
+- `votes` — id, targetType (`FIXTURE` | `PROPOSAL`), targetId, userId,
+  direction (+1 / -1), unique on `(userId, targetType, targetId)`
+
+## Governance Rules (critical — do not violate)
+
+This is the load-bearing rule of the whole platform: **who is allowed to
+change a fixture depends on whether its competition is locked.**
+
+- **Locked competitions** (`isLocked = true`, `authorityType = 'SCRAPED'`,
+  e.g. Super League, GAA All-Ireland): fixtures are written only by scrapers,
+  with `trustStatus = 'OFFICIAL'`. Community users can never create, edit, or
+  vote to change these fixtures directly. They may only file a **"Report
+  Discrepancy"** dispute (reason + source URL) — this never mutates the
+  official fixture.
+- **Unlocked / community competitions** (`isLocked = false`,
+  `authorityType = 'COMMUNITY'`, e.g. Roller Derby, local clubs): fixtures may
+  be submitted by authenticated users, always starting at
+  `trustStatus = 'NEEDS_VERIFICATION'` and always requiring a **mandatory
+  proof URL**.
+- **Submission form must hard-block** any attempt to submit into a locked
+  competition, with a friendly message ("Official fixtures for this league
+  are managed automatically").
+- **Promotion rule**: a community fixture is auto-promoted from
+  `NEEDS_VERIFICATION` to `COMMUNITY_VERIFIED` once it reaches **+3 net
+  votes**. Voting is one vote per user per target, enforced by a unique
+  constraint.
+- Scrapers must be **idempotent**: re-running must update changed fields
+  (e.g. rescheduled kickoff) on the existing row, never insert duplicates.
+
+## Standard Commands
+
+```bash
+# Local database
+docker compose up -d
+
+# Dev server
+npm run dev
+
+# Schema / migrations
+npx drizzle-kit generate
+npx drizzle-kit migrate
+
+# Seed data
+npm run db:seed          # runs src/db/seed.ts
+
+# Scrapers
+npm run scrape                        # all adapters
+npm run scrape -- --league=super-league
+npm run scrape -- --league=gaa
+npx tsx src/scrapers/gaa/index.ts --dry-run
+npx tsx src/scrapers/super-league/index.ts --dry-run
+```
+
+## Implementation Checklist
+
+Work sequentially. Commit after each sub-phase passes its verification
+command (`git commit -m "feat: complete phase X.Y"`).
+
+- **Phase 1 — Foundation & Database**
+  - [ ] 1.1 Project skeleton (Next.js + TS + Tailwind) & Dockerized Postgres
+  - [ ] 1.2 Drizzle ORM & core domain schema (sports, competitions, teams,
+        venues, fixtures)
+  - [ ] 1.3 Governance schema (fixture_proposals, votes) & seed script
+- **Phase 2 — Scraper-First Pipeline**
+  - [ ] 2.1 Base scraper framework & normalized types
+  - [ ] 2.2 UK Super League scraper adapter
+  - [ ] 2.3 GAA All-Ireland scraper adapter
+  - [ ] 2.4 Unified ingestion runner CLI (idempotent upserts)
+- **Phase 3 — Public APIs & Calendar Feeds**
+  - [ ] 3.1 Public read-only REST API (`/api/v1/*`)
+  - [ ] 3.2 Dynamic iCal / webcal subscription feeds
+- **Phase 4 — Mobile-First Fan Portal**
+  - [ ] 4.1 Layout, navigation, sport tabs, date bar
+  - [ ] 4.2 FixtureCard & match details
+  - [ ] 4.3 "Subscribe to Calendar" modal
+- **Phase 5 — Crowdsourcing & Governance**
+  - [ ] 5.1 Auth.js authentication setup
+  - [ ] 5.2 Grassroots fixture submission form (locked-competition block)
+  - [ ] 5.3 Community verification & upvoting (+3 promotion rule)
+- **Phase 6 — Production Polish & PWA**
+  - [ ] 6.1 PWA manifest & offline support
+  - [ ] 6.2 Automated ingestion cron (`/api/cron/scrape` + GitHub Actions)
+
+See `plan.md` for full scope details and the exact Claude-Code prompt text
+for each sub-phase.
