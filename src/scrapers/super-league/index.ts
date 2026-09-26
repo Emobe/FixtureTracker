@@ -10,6 +10,7 @@
  */
 import type { Cheerio, CheerioAPI } from "cheerio";
 import type { AnyNode } from "domhandler";
+import { pathToFileURL } from "node:url";
 import { BaseScraper, type ScrapedFixture } from "../base";
 import { getOrCreateCompetition, getOrCreateSport, getOrCreateTeam, getOrCreateVenue, slugify, upsertFixture } from "../db-helpers";
 
@@ -33,7 +34,7 @@ const FIXTURE_TABLE_COLUMNS = 7; // Home, Score, Away, Date, Venue, Referee, Att
  * same-day double-headers, e.g. Magic Weekend) by repeating the spanning
  * cell for the rows it covers.
  */
-function buildFixtureGrid(
+export function buildFixtureGrid(
   table: Cheerio<AnyNode>,
   $: CheerioAPI,
 ): Cheerio<AnyNode>[][] {
@@ -89,7 +90,7 @@ const MONTHS: Record<string, number> = {
   december: 12,
 };
 
-function parseWikipediaDate(text: string): {
+export function parseWikipediaDate(text: string): {
   year: number;
   month: number;
   day: number;
@@ -112,7 +113,7 @@ function parseWikipediaDate(text: string): {
   };
 }
 
-function parseScore(
+export function parseScore(
   text: string,
 ): { home: number; away: number } | "POSTPONED" | null {
   const stripped = text
@@ -288,7 +289,14 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error("[super-league] scrape failed:", err);
-  process.exit(1);
-});
+// Only auto-run when executed directly (`tsx .../index.ts`), not when
+// imported as a module — e.g. by tests importing the pure parsing helpers
+// above, which must not trigger a live network scrape.
+const isMainModule =
+  !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) {
+  main().catch((err) => {
+    console.error("[super-league] scrape failed:", err);
+    process.exit(1);
+  });
+}
