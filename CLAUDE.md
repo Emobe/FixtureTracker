@@ -466,7 +466,63 @@ npm run scrape -- --league=super-league
 npm run scrape -- --league=gaa
 npx tsx src/scrapers/gaa/index.ts --dry-run
 npx tsx src/scrapers/super-league/index.ts --dry-run
+
+# Automated tests (needs `docker compose up -d` running first)
+npm test                 # vitest run — unit + DB integration tests, once
+npm run test:watch       # vitest watch mode
+npm run test:coverage    # vitest run --coverage
 ```
+
+## Automated Tests
+
+`npm test` runs [Vitest](https://vitest.dev). Test files live next to the
+code they cover (`*.test.ts`) for pure logic, or under `tests/integration/`
+for anything that touches the database.
+
+- **Test database isolation**: integration tests run against
+  `TEST_DATABASE_URL` (`.env` / `.env.example`), a *separate* database
+  (`sports_fixtures_test`) on the same local Postgres container — never
+  the real dev database. `tests/global-setup.ts` creates it and applies
+  every migration once before the whole run; `tests/setup.ts` points
+  `DATABASE_URL` at it before each test file's own imports resolve (this
+  works because `src/db/index.ts` reads `process.env.DATABASE_URL` at
+  *import* time, and Vitest's `setupFiles` run before that import).
+  `tests/reset-db.ts` truncates every app table between tests — always
+  call it from a `beforeEach` in a new integration test file, or state
+  will leak between tests.
+- **The scraper files are also CLI entry points** (`src/scrapers/gaa/index.ts`,
+  `src/scrapers/super-league/index.ts`) — each one calls `main()`
+  unconditionally at the bottom of the file when run via `tsx`. Both files
+  now guard that call with an `isMainModule` check
+  (`import.meta.url === pathToFileURL(process.argv[1]).href`) so that
+  *importing* the module (as their test files do, to reach the pure
+  parsing helpers `parseScore`, `parseWikipediaDate`, `buildFixtureGrid`,
+  `extractMatches`, `parseMatchDate` — all now `export`ed for exactly this
+  reason) doesn't trigger a live network scrape. Don't remove that guard;
+  don't add a new top-level side-effecting call to either file without
+  the same guard.
+- **Zod UUIDs are stricter than they look**: `z.string().uuid()` rejects
+  an all-same-digit placeholder like
+  `11111111-1111-1111-1111-111111111111` (invalid version/variant
+  nibbles) — test fixtures use a real-shaped v4 UUID
+  (`11111111-1111-4111-8111-111111111111`) instead. If a "valid" fixture
+  mysteriously fails validation in a new test, check this first.
+- **ICS output is line-folded**: `ical-generator` wraps long `DESCRIPTION`
+  lines at ~75 chars with a `\r\n ` continuation. `calendar.test.ts`'s
+  `unfold()` helper strips that before substring assertions — use it for
+  any new assertion against a long calendar field rather than special-casing
+  the fold point.
+- **`parsePagination`'s `pageSize=0` quirk is real, not a test bug**:
+  `Number(searchParams.get("pageSize")) || DEFAULT_PAGE_SIZE` treats `0`
+  as falsy, so `?pageSize=0` silently falls back to the default (20)
+  rather than clamping to 1 the way a negative value does. Documented via
+  a test, not "fixed" — changing it is a product decision, not a bug fix.
+- Not covered yet: the Next.js API routes/Server Actions themselves
+  (`src/app/api/**/route.ts`, `src/app/actions/**`) aren't tested directly
+  since most depend on `auth()`/`headers()` request context that isn't
+  worth mocking yet — their underlying logic (validation schemas,
+  `castVoteForUser`, `db-helpers`) is covered instead. Revisit if a real
+  bug ever slips through at the route layer specifically.
 
 ## Implementation Checklist
 

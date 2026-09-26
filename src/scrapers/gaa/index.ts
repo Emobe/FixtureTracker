@@ -11,6 +11,7 @@
  * time-of-day is the Irish *local* kickoff time (not true UTC) — see
  * `parseMatchDate` below.
  */
+import { pathToFileURL } from "node:url";
 import { BaseScraper, type ScrapedFixture } from "../base";
 import {
   getOrCreateCompetition,
@@ -59,7 +60,7 @@ function scoreDisplay(goals: number, points: number): string {
 }
 
 /** Ireland's kickoff wall-clock time, ignoring the source's bogus +00:00 offset. */
-function parseMatchDate(iso: string): {
+export function parseMatchDate(iso: string): {
   year: number;
   month: number;
   day: number;
@@ -91,7 +92,7 @@ function parseMatchDate(iso: string): {
  * the boundary between records shifts between requests, sometimes landing
  * mid-record.
  */
-function extractMatches(html: string): GaaMatch[] {
+export function extractMatches(html: string): GaaMatch[] {
   const chunkRe = /self\.__next_f\.push\(\[(\d+),"((?:[^"\\]|\\.)*)"\]\)/g;
   const byId = new Map<string, string>();
   let match: RegExpExecArray | null;
@@ -290,7 +291,14 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((err) => {
-  console.error("[gaa] scrape failed:", err);
-  process.exit(1);
-});
+// Only auto-run when executed directly (`tsx .../index.ts`), not when
+// imported as a module — e.g. by tests importing the pure parsing helpers
+// above, which must not trigger a live network scrape.
+const isMainModule =
+  !!process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (isMainModule) {
+  main().catch((err) => {
+    console.error("[gaa] scrape failed:", err);
+    process.exit(1);
+  });
+}
