@@ -365,6 +365,83 @@ change a fixture depends on whether its competition is locked.**
   the tabs) — see the `isActive` special-case in `BottomNav.tsx`, don't
   "simplify" that back to a plain `pathname === item.href` check.
 
+## Deviations from the Original Plan
+
+`plan.md` is the source of truth for scope and phasing, but the following
+either weren't followed literally or were added after the plan's own six
+phases were complete. Recorded here so a future session doesn't "fix" any
+of these back to the letter of the plan without realizing it was already a
+deliberate call — or, for the two real gaps, doesn't mistake them for
+intentional.
+
+**Deliberate, requested changes:**
+- **Next.js 16, not 15.** The plan's tech stack says Next.js 15; the user
+  explicitly asked for 16 instead (with `agentRules: false` in
+  `next.config.ts` to stop `next dev` auto-writing its own block into this
+  file — also not in the plan, needed only because of the version bump).
+- **No shadcn/ui**, despite the plan's tech stack listing "Shadcn UI
+  primitives." Every component was hand-built with Tailwind + `lucide-react`
+  instead; `shadcn` was never installed and there's no `components.json` or
+  `src/components/ui/`.
+- **No `src/app/(web)/` route group**, despite the plan's project-structure
+  diagram showing one. Public pages live directly under `src/app/` — there
+  was never a reason to introduce the grouping once routing actually got
+  built.
+- **A full visual redesign** (deep slate/zinc dark mode, a custom accent
+  color, per-team color-hash monogram crests, scoreboard-style monospace
+  time/score typography) went well beyond the plan's generic "mobile-first"
+  direction in Phase 4 — this was a specific, later, user-driven design
+  pass (see the UI design system note above), not anything phase 4.1–4.3
+  asked for.
+- **`/teams` and `/competitions` list pages, global search
+  (`/api/search`), and real team crests** (sourced from Wikipedia — see the
+  notes above) don't exist anywhere in `plan.md`. All three were added
+  after every phase in the plan was already complete, at the user's request.
+- **An automated test suite (Vitest)** doesn't exist in the plan at all —
+  every phase's own "Verification Command" is a manual curl/browser/dry-run
+  check. The test suite was added afterward, on its own branch, specifically
+  *because* the plan never asked for regression coverage and re-verifying
+  everything by hand every time it came up wasn't sustainable.
+- **`fixture_proposals` reused as an audit-log table for the initial
+  community submission** (5.2) — the plan's own 5.2 prompt says to "create
+  an initial audit log entry," but no audit-log table exists anywhere in
+  the plan's schema (only `fixture_proposals` and `votes`, both from 1.3).
+  Reusing `fixture_proposals` with `status = 'ACCEPTED'` was an
+  interpretation, not literal plan compliance.
+- **`src/db/seed.ts` seeds a Roller Derby competition**, added during 5.2 —
+  the plan's own 1.3 scope for the seed script only mentions sports and
+  venues, no competitions. Without it, 5.2's submission form would have had
+  nothing unlocked to submit into.
+
+**Real gaps against the plan (not deliberate):**
+- **Broadcast info is never actually populated.** Both plan Sub-Phase 2.2
+  ("TV/stream link... TV broadcast details") and 4.2 (broadcast tag) assume
+  scraped fixtures carry a broadcaster. Neither scraper ever sets
+  `broadcastInfo` — Wikipedia (the Super League source, chosen after the
+  official site started blocking non-browser clients) doesn't reliably list
+  broadcasters, and the GAA source was never mapped to one either. The
+  `FixtureCard` broadcast tag and the calendar feed's broadcast line are
+  fully wired up and correct — they just never have data to show for
+  scraped fixtures. Only a community submission could ever populate it, and
+  the submission form doesn't currently expose that field either.
+- **Fuzzy team-name matching (2.1) was built but is dead code.** The plan's
+  2.1 scope explicitly asks for "utility functions for fuzzy matching team
+  names against existing database records," and
+  `src/scrapers/match-teams.ts` (`similarity`, `findBestTeamMatch`,
+  Levenshtein-based) exists and does this — but nothing calls it.
+  `getOrCreateTeam` (`db-helpers.ts`) matches teams by exact slug instead,
+  which has been sufficient in practice since both scrapers' sources use
+  consistent team naming. Don't delete `match-teams.ts` assuming it's
+  leftover cruft without checking whether something now depends on it, and
+  don't assume it's wired in anywhere just because it exists.
+- **The original 4.3 Subscribe modal was missing Outlook** even though the
+  plan's own 4.3 *prompt* text lists it ("Apple Calendar..., Google
+  Calendar..., Outlook, and direct `.ics` download") — the 4.3 *scope*
+  bullets above the prompt only mention Apple/Google/Download, and the
+  scope list is what got built first. Fixed later, incidentally, during the
+  UI redesign pass (`SubscribeCalendarModal.tsx` now has an Outlook option,
+  pointed at the same `webcal://` URL as Apple Calendar).
+
 ## Standard Commands
 
 ```bash
