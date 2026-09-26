@@ -16,7 +16,9 @@ const ITEMS: NavItem[] = [
   { label: "Calendar", href: "/calendar", icon: CalendarDays },
 ];
 
-/** Mobile-only bottom tab bar. Destinations beyond "/" aren't built yet (later phases), so they render disabled. */
+const BUILT_HREFS = ["/", "/teams", "/competitions"];
+
+/** Mobile-only bottom tab bar. "Calendar" isn't built yet, so it renders disabled. */
 export function BottomNav() {
   const pathname = usePathname();
 
@@ -24,8 +26,14 @@ export function BottomNav() {
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
       <div className="mx-auto flex h-16 max-w-3xl items-stretch justify-around">
         {ITEMS.map((item) => {
-          const isBuilt = item.href === "/";
-          const isActive = isBuilt && pathname === item.href;
+          const isBuilt = BUILT_HREFS.includes(item.href);
+          // "Teams" also lights up on /competitions — they're the same
+          // browse section, switched via BrowseTabs.
+          const isActive =
+            isBuilt &&
+            (item.href === "/teams"
+              ? pathname === "/teams" || pathname === "/competitions"
+              : pathname === item.href);
           const Icon = item.icon;
 
           if (!isBuilt) {

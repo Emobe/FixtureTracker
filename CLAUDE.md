@@ -170,9 +170,9 @@ change a fixture depends on whether its competition is locked.**
   and competition headers" per the plan's own 4.3 prompt implies they
   exist. Each is a minimal Server Component: header + Subscribe button +
   that team's/competition's fixtures via `FixtureCard`. `FixtureCard`'s
-  team name and competition name link here. There's still no `/teams` or
-  `/competitions` *list* page — `BottomNav`'s "Teams" entry stays disabled
-  until one exists.
+  team name and competition name link here. `/teams` and `/competitions`
+  *list* pages were added later (see below) — `BottomNav`'s "Teams" entry
+  now links there.
 - **UI design system (5.1)**: the fan portal uses a deep slate/zinc dark
   mode with a single custom accent color (`--accent`, defined in
   `src/app/globals.css` and exposed as Tailwind's `bg-accent` /
@@ -352,10 +352,18 @@ change a fixture depends on whether its competition is locked.**
   `teams` and `competitions` (top 8 each). This is separate from the
   public `/api/v1/*` REST API (no pagination, no sport filter, not part
   of that documented contract) — it exists purely to back this one UI.
-  There's no dedicated `/teams` or `/competitions` browse/list page yet
-  (still the known gap noted above), so search is currently the only way
-  to reach a team or competition you don't already have a fixture card
-  link to.
+  `/teams` and `/competitions` list pages (below) are now the primary
+  browse path; search is the fast path for when you already know the name.
+- **`/teams` and `/competitions` list pages**: `src/app/teams/page.tsx`
+  and `src/app/competitions/page.tsx`, grouped by sport, reusing
+  `SportFilterPills` (already generic over the current pathname) for
+  filtering and a shared `BrowseTabs` segmented control
+  (`src/components/BrowseTabs.tsx`) to switch between the two — both
+  preserve the `?sport=` query param across the switch. `BottomNav`'s
+  "Teams" tab is now built and highlights active for *both* `/teams` and
+  `/competitions` (they're the same browse section, just switched via
+  the tabs) — see the `isActive` special-case in `BottomNav.tsx`, don't
+  "simplify" that back to a plain `pathname === item.href` check.
 
 ## Standard Commands
 
